@@ -1,0 +1,40 @@
+{
+    "name": "smqtt-nodejs",
+    "title": "ACEP InfoSec IT Asset Management (ITAM) Graph Database (GDB)",
+    "version": "1.0.0",
+    "version_date": "2024-03-14",
+    "description": "Secret Message Queue Telemetry Transport (SMQTT) for Node.js",
+    "main": "index.js",
+    "type": "module",
+    "license": "See: LICENSE.md",
+    "private": false,
+    "engines": {
+        "node": ">= 14.0.0",
+        "npm": ">= 6.0.0"
+    },
+    "homepage": "",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/jehaverlack/smqtt-nodejs"
+    },
+    "bugs": "",
+    "keywords": ["mqtt", "encryption", "security", "iot", "telemetry", "transport", "message", "queue", "secret"],
+    "author": {
+        "name": "John Haverlack",
+        "email": "jehaverlack@alaska.edu",
+        "url": "https://www.uaf.edu/acep/about/our-team/john-haverlack.php"
+    },
+    "copyright": "© 2024 Alaska Center for Energy and Power, University of Alaska Fairbanks",
+    "copyright_holder": "Alaska Center for Energy and Power, University of Alaska Fairbanks",
+    "copyright_url": "https://acep.uaf.edu/",
+    "copyright_year": "2024",
+    "contributors": [],
+    "scripts": {
+        "dev": "",
+        "test": "",
+        "start": "node src/index.js"
+    },
+    "dependencies": {
+        "mqtt": "^4.2.0"
+    }
+}

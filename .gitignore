@@ -1,3 +1,7 @@
+# Custom
+keys/*
+conf/*
+
 # Logs
 logs
 *.log
