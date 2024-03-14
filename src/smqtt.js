@@ -7,14 +7,31 @@ import { fileURLToPath } from 'url';
 
 
 export function pub_usage() { // Print usage for smqtt-pub.js
-    console.log(`Usage:  smqtt-pub.js -c <mqtt-config.json> -h <mqtt_broker> -t <topic> -m <message>
+    console.log(`Usage:  smqtt-pub.js -c <mqtt-config.json> [OPTIONS] -m <message>
     -c <mqtt-config.json>  : The configuration file in conf directory.
-    -l <logfile>           : OPTIONAL: The log file to write to. Default is logs/smqtt.log
-    -h <mqtt_broker>       : OPTIONAL: Overides MQTT Broker from the mqtt-config.json.
-    -p <mqtt_port>         : OPTIONAL: Overides MQTT Port from the mqtt-config.json.
-    -t <topic>             : OPTIONAL: Overides the MQTT Topic from the mqtt-config.json.
-    -m <message>           : The message to encrypt and publish to the MQTT Topic.`)
+    -m <message>           : The message to encrypt and publish to the MQTT Topic.
+
+    Optional Arguments:
+    -l <logfile>           : Override the Logfile from the mqtt-config.json
+    -h <mqtt_broker>       : Overides MQTT Broker from the mqtt-config.json
+    -p <mqtt_port>         : Overides MQTT Port from the mqtt-config.json
+    -t <topic>             : Overides the MQTT Topic from the mqtt-config.json
+    -k <new_key_name>      : Generate new RSA Key Pair and save to KEY_DIR directory.
+    `)
 }
+
+export function sub_usage() { // Print usage for smqtt-sub.js
+    console.log(`Usage:  smqtt-sub.js -c <mqtt-config.json> [OPTIONS]
+    -c <mqtt-config.json>  : The configuration file in conf directory.
+
+    Optional Arguments:
+    -l <logfile>           : Override the Logfile from the mqtt-config.json
+    -h <mqtt_broker>       : Overides MQTT Broker from the mqtt-config.json
+    -p <mqtt_port>         : Overides MQTT Port from the mqtt-config.json
+    -t <topic>             : Overides the MQTT Topic from the mqtt-config.json
+    `)
+}
+
 
 export function get_config(app) { // Get the configuration
     // ##########  Defining Configuration  ##########
@@ -61,9 +78,7 @@ export function get_config(app) { // Get the configuration
 
 
     // project directory aka: src/..
-    config.DIRS.APP_DIR = path.join(fileURLToPath(import.meta.url), '..', '..')
-    config.APP.NAME     = path.join(app).replace(path.join(config.DIRS.APP_DIR, 'src') + '/', '')
-
+    config.DIRS.APP_DIR  = path.join(fileURLToPath(import.meta.url), '..', '..')
 
     for (let d in config.DIRS) {
         for (let r in config.DIRS) {
@@ -89,33 +104,105 @@ export function get_config(app) { // Get the configuration
 
     // Read package.json
 
-        let packageFile = path.join(config.DIRS.APP_DIR, 'package.json')
-        let packageJson = JSON.parse(fs.readFileSync(packageFile, 'utf8'))
-        config.PACKAGE = packageJson
-        // console.log('DEBUG: ' + packageFile + ': ' + JSON.stringify(packageJson, null, 2))
+    let packageFile = path.join(config.DIRS.APP_DIR, 'package.json')
+    let packageJson = JSON.parse(fs.readFileSync(packageFile, 'utf8'))
+    config.PACKAGE = packageJson
 
-    // try {
-    //     // config.PACKAGE = packageJson
-    // } catch (e) {
-    //     console.error('ERROR: Cannot read ' + path.join(config.DIRS.APP_DIR, 'package.json'))
-    //     process.exit(1)
-    // }
+    config.APP.NAME      = path.join(app).replace(path.join(config.DIRS.APP_DIR, 'src') + '/', '')
+    config.APP.LOG_TITLE = config.APP.NAME + " : v" + config.PACKAGE.version + ' ' + config.PACKAGE.version_date + ' : PID = ' + process.pid
+    
+    // Debug
+    // console.log('DEBUG: ' + JSON.stringify(config, null, 2))
 
-    // If config.SMQTT.PRIVATE_KEY and/or config.SMQTT.PUBLIC_KEY are not defined or empty, then look
-    // to import key files in config.FILES.PRIVATE_KEY_FILE and config.FILES.PUBLIC_KEY_FILE.
-    // if (config.SMQTT.PRIVATE_KEY === '') {
-    //     try {
-    //         config.SMQTT.PRIVATE_KEY = fs.readFileSync(config.FILES.PRIVATE_KEY_FILE, 'utf8')
-    //     } catch (e) {
-    //         console.error('ERROR: No Private Key Provided')
-    //         pub_usage()
-    //         process.exit(1)
-    //     }
+    // Private / Public Keys
+    // 0. if -k ARGV Generate new RSA Key Pair and save to KEY_DIR directory.
+    // 1. Firt look to config.SMQTT.PRIVATE_KEY and config.SMQTT.PUBLIC_KEY.
+    // 2. If keys are not defined in step 1.  Then look to import key files in config.FILES.PRIVATE_KEY_FILE and config.FILES.PUBLIC_KEY_FILE.
+    // 3. If keys are not defined in step 2.  Then generate new keys.
+    // 4. If keys are not defined in step 3.  Then exit with error.
 
-    // }
+    if (argv.indexOf('-k') > -1) {
+        let keyName = argv[argv.indexOf('-k') + 1]
+        let newKeys = gen_rsa_keys()
 
+        config.FILES.PRIVATE_KEY_FILE = path.join(config.DIRS.KEY_DIR, keyName + '.priv.pem')
+        config.FILES.PUBLIC_KEY_FILE = path.join(config.DIRS.KEY_DIR, keyName + '.pub.pem')
 
-    // ##########  Validating Configuration  ##########
+        // update config file with new keys
+        config.SMQTT.PRIVATE_KEY = newKeys.privateKey
+        config.SMQTT.PUBLIC_KEY = newKeys.publicKey
+
+        // console.log('DEBUG: ' + JSON.stringify(config.SMQTT, null, 2))
+        // console.log('DEBUG: ' + JSON.stringify(config.FILES, null, 2))
+
+        // Write Private Key to File with 400 permission
+        try {
+            fs.writeFileSync(config.FILES.PRIVATE_KEY_FILE, newKeys.privateKey, 'utf8')
+            logger('INFO : New RSA Private Key File: ' + config.FILES.PRIVATE_KEY_FILE, config.FILES.LOG_FILE)
+            try {
+                fs.chmodSync(config.FILES.PRIVATE_KEY_FILE, 0o400)
+            } catch (e) {
+                logger('ERROR: Cannot chmod Private Key File: ' + config.FILES.PRIVATE_KEY_FILE + ' : ' + e, config.FILES.LOG_FILE)
+                console.error('ERROR: Cannot chmod Private Key File: ' + config.FILES.PRIVATE_KEY_FILE + ' : ' + e)
+                process.exit(1)
+            }
+        } catch (e) {
+            logger('ERROR: Cannot write Private Key File: ' + config.FILES.PRIVATE_KEY_FILE + ' : ' + e, config.FILES.LOG_FILE)
+            console.error('ERROR: Cannot write Private Key File: ' + config.FILES.PRIVATE_KEY_FILE + ' : ' + e)
+            process.exit(1)
+        }
+
+        // Write Public Key to File with 400 permissions
+        try {
+            fs.writeFileSync(config.FILES.PUBLIC_KEY_FILE, newKeys.publicKey, 'utf8')
+            logger('INFO : New RSA Public  Key File: ' + config.FILES.PUBLIC_KEY_FILE, config.FILES.LOG_FILE)
+            try {
+                fs.chmodSync(config.FILES.PUBLIC_KEY_FILE, 0o400)
+            } catch (e) {
+                logger('ERROR: Cannot chmod Public Key File: ' + config.FILES.PUBLIC_KEY_FILE + ' : ' + e, config.FILES.LOG_FILE)
+                console.error('ERROR: Cannot chmod Public Key File: ' + config.FILES.PUBLIC_KEY_FILE + ' : ' + e)
+                process.exit(1)
+            }
+        } catch (e) {
+            logger('ERROR: Cannot write Public Key File: ' + config.FILES.PUBLIC_KEY_FILE + ' : ' + e, config.FILES.LOG_FILE)
+            console.error('ERROR: Cannot write Public Key File: ' + config.FILES.PUBLIC_KEY_FILE + ' : ' + e)
+            process.exit(1)
+        }
+
+        // Read, Update, and Write the Config File
+        let configFile = JSON.parse(fs.readFileSync(config.FILES.CONFIG, 'utf8'))
+        // configFile.SMQTT.PRIVATE_KEY = newKeys.privateKey
+        // configFile.SMQTT.PUBLIC_KEY = newKeys.publicKey
+        configFile.FILES.PRIVATE_KEY_FILE = config.FILES.PRIVATE_KEY_FILE
+        configFile.FILES.PUBLIC_KEY_FILE = config.FILES.PUBLIC_KEY_FILE
+        
+        try {
+            fs.writeFileSync(config.FILES.CONFIG, JSON.stringify(configFile, null, 2), 'utf8')
+        } catch (e) {
+            logger('ERROR: Cannot write Config File: ' + config.FILES.CONFIG + ' : ' + e, config.FILES.LOG_FILE)
+            console.error('ERROR: Cannot write Config File: ' + config.FILES.CONFIG + ' : ' + e)
+            process.exit(1)
+        }
+
+    } else {
+        if (config.SMQTT.PRIVATE_KEY && config.SMQTT.PUBLIC_KEY) {
+            config.SMQTT.PRIVATE_KEY = config.SMQTT.PRIVATE_KEY
+            config.SMQTT.PUBLIC_KEY = config.SMQTT.PUBLIC_KEY
+        } else if (config.FILES.PRIVATE_KEY_FILE && config.FILES.PUBLIC_KEY_FILE) {
+            try {
+                config.SMQTT.PRIVATE_KEY = fs.readFileSync(config.FILES.PRIVATE_KEY_FILE, 'utf8')
+                config.SMQTT.PUBLIC_KEY = fs.readFileSync(config.FILES.PUBLIC_KEY_FILE, 'utf8')
+            } catch (e) {
+                console.log('TIP:  Generating new RSA Key Pair with the -k option')
+                pub_usage()
+                process.exit(1)
+            }
+        } else {
+            console.log('TIP:  Generating new RSA Key Pair with the -k option')
+            pub_usage()
+            process.exit(1)
+        }
+    }
 
   return config
 }
@@ -147,3 +234,91 @@ export function gen_rsa_keys() { // Generate a new RSA Key Pair
     })
     return { privateKey, publicKey }
 }
+
+export function encrypt_message(message, publicKey) { // Encrypt a message with the public key
+    return crypto.publicEncrypt(publicKey, Buffer.from(message, 'utf8')).toString('base64')
+}
+
+export function decrypt_message(encryptedMessage, privateKey) { // Decrypt a message with the private key
+    return crypto.privateDecrypt(privateKey, Buffer.from(encryptedMessage, 'base64')).toString('utf8')
+}
+
+// export async function publish(config) { // Publish a secret message to the MQTT Broker
+//     try {
+//         let client = mqtt.connect('mqtt://' + config.MQTT.BROKER + ':' + config.MQTT.PORT)
+//         let checksum = crypto.createHash('sha256').update(config.MQTT.MESSAGE).digest('base64')
+//         let payload = {}
+//         payload['MESSAGE'] = config.MQTT.MESSAGE
+//         payload['CHECKSUM'] = checksum
+//         let msgString = JSON.stringify(payload)
+
+//         let spayload = {}
+//         spayload['SMQTT'] = []
+//         spayload['SMQTT'].push(encrypt_message(msgString, config.SMQTT.PUBLIC_KEY))
+
+//         client.on('connect', () => {
+//             try {
+//                 client.publish(config.MQTT.TOPIC, JSON.stringify(spayload))
+//                 client.end()
+//             } catch (err) {
+//                 logger('ERROR: Cannot publish message to MQTT Broker: ' + config.MQTT.BROKER + ' : ' + err, config.FILES.LOG_FILE)
+//                 return false
+//             }
+//         })
+
+//         return true
+//     } catch (err) {
+//         logger('ERROR: Cannot connect to MQTT Broker: ' + config.MQTT.BROKER + ' : ' + err, config.FILES.LOG_FILE)
+//         return false
+//     }
+// }
+
+export function publish(config) { // Publish a secret message to the MQTT Broker
+    return new Promise((resolve, reject) => {
+        try {
+            let client = mqtt.connect('mqtt://' + config.MQTT.BROKER + ':' + config.MQTT.PORT)
+            let checksum = crypto.createHash('sha256').update(config.MQTT.MESSAGE).digest('base64')
+            let payload = {}
+            payload['TIMESTAMP'] = new Date().toISOString() // UTC ISO 8601
+            payload['MESSAGE'] = config.MQTT.MESSAGE
+            payload['CHECKSUM'] = checksum
+            let msgString = JSON.stringify(payload)
+
+            let spayload = {}
+            spayload['SMQTT'] = []
+            spayload['SMQTT'].push(encrypt_message(msgString, config.SMQTT.PUBLIC_KEY))
+
+            client.on('connect', () => {
+                try {
+                    client.publish(config.MQTT.TOPIC, JSON.stringify(spayload))
+                    client.end()
+                    resolve(true)
+                } catch (err) {
+                    logger('ERROR: Cannot publish message to MQTT Broker: ' + config.MQTT.BROKER + ' : ' + err, config.FILES.LOG_FILE)
+                    reject(false)
+                }
+            })
+
+        } catch (err) {
+            logger('ERROR: Cannot connect to MQTT Broker: ' + config.MQTT.BROKER + ' : ' + err, config.FILES.LOG_FILE)
+            reject(false)
+        }
+    })
+}
+
+// export function sub_message(config) { // Subscribe to the MQTT Broker and decrypt the message
+//     let client = mqtt.connect('mqtt://' + config.MQTT.BROKER + ':' + config.MQTT.PORT)
+
+//     client.on('connect', () => {
+//         client.subscribe(config.MQTT.TOPIC, (err) => {
+//             if (!err) {
+//                 client.on('message', (topic, message) => {
+//                     let payload = JSON.parse(message)
+//                     let msgString = decrypt_message(payload['SMQTT'][0], config.SMQTT.PRIVATE_KEY)
+//                     let msg = JSON.parse(msgString)
+//                     logger('INFO : ' + msg['MESSAGE'] + ' : ' + msg['CHECKSUM'], config.FILES.LOG_FILE)
+//                 })
+//             }
+//         })
+//     })
+// }

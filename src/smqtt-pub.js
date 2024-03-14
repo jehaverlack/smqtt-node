@@ -13,22 +13,31 @@ const config = smqtt.get_config(fileURLToPath(import.meta.url))
 
 // ##########  Main Routine  ##########
 
-console.log('DEBUG: ' + JSON.stringify(config, null, 2))
+// console.log('DEBUG: ' + JSON.stringify(config, null, 2))
 
-smqtt.logger('START : ' + config.APP.NAME + " - " + config.PACKAGE.version + ' ' + config.PACKAGE.version_data, config.FILES.LOG_FILE)
+smqtt.logger('START : ' + config.APP.LOG_TITLE, config.FILES.LOG_FILE)
 
+// Publish the message to the MQTT Broker
+
+smqtt.logger('PUB : MESSAGE : ' + config.MQTT.MESSAGE, config.FILES.LOG_FILE)
+try {
+    const result = await smqtt.publish(config);
+    smqtt.logger('PUB : MESSAGE : ' + result, config.FILES.LOG_FILE);
+} catch (err) {
+    smqtt.logger('ERROR : ' + err, config.FILES.LOG_FILE);
+}
 
 // ##########  End Main Routine  ##########
 // Exit if the event loop reaches the end.
 process.on('SIGINT', () => {
-    smqtt.logger('END : ' + config.APP.NAME + " - " + config.PACKAGE.version + ' ' + config.PACKAGE.version_data, config.FILES.LOG_FILE)
+    smqtt.logger('END   : ' + config.APP.LOG_TITLE, config.FILES.LOG_FILE)
     process.exit(0)
 });
 
 process.on('SIGTERM', () => {
-    smqtt.logger('END : ' + config.APP.NAME + " - " + config.PACKAGE.version + ' ' + config.PACKAGE.version_data, config.FILES.LOG_FILE)
+    smqtt.logger('END   : ' + config.APP.LOG_TITLE, config.FILES.LOG_FILE)
     process.exit(0)
 });
 
-smqtt.logger('END : ' + config.APP.NAME + " - " + config.PACKAGE.version + ' ' + config.PACKAGE.version_data, config.FILES.LOG_FILE)
+smqtt.logger('END   : ' + config.APP.LOG_TITLE, config.FILES.LOG_FILE)
 process.exit(0)
