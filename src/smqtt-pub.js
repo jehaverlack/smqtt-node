@@ -3,7 +3,6 @@
 // - An ES6 script that uses the smqtt library to publish a message to a MQTT Broker.
 // - Pub Clients need access to the Private Key
 
-import * as path from 'path'
 import { fileURLToPath } from 'url';
 import * as smqtt from './smqtt.js'
 

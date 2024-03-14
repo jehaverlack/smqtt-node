@@ -1,17 +1,27 @@
 {
-    "FILES": {
-        "CONFIG": "",
-        "LOG": "log.txt",
-        "PRIVATE_KEY_FILE": "",
-        "PUBLIC_KEY_FILE": ""
-    },
-    "MQTT": {
-        "BROKER": "mqtt.example.com",
-        "PORT": 1883,
-        "TOPIC": "/example/topic"
-    },
-    "SMQTT": {
-        "PUBLIC_KEY": "",
-        "PRIVATE_KEY": ""
-    }
+  "APP": {
+    "NAME": ""
+  },
+  "PACKAGE": {},
+  "DIRS": {
+    "APP_DIR": "",
+    "CONF_DIR": "APP_DIR/conf",
+    "LOG_DIR": "APP_DIR/logs",
+    "KEY_DIR": "APP_DIR/keys"
+  },
+  "FILES": {
+    "CONF_FILE": "",
+    "LOG_FILE": "",
+    "PRIVATE_KEY_FILE": "",
+    "PUBLIC_KEY_FILE": ""
+  },
+  "MQTT": {
+    "BROKER": "mqtt.example.com",
+    "PORT": 1883,
+    "TOPIC": "/example/topic"
+  },
+  "SMQTT": {
+    "PUBLIC_KEY": "",
+    "PRIVATE_KEY": ""
+  }
 }

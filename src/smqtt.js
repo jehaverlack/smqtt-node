@@ -52,11 +52,6 @@ export function get_config(app) { // Get the configuration
     config.MQTT.BROKER = argv[argv.indexOf('-h') + 1]
     }
 
-    // if -l ARGV Override Log File from -l ARGV
-    if (argv.indexOf('-l') > -1) {
-    config.FILES.LOG = argv[argv.indexOf('-l') + 1]
-    }
-
     // If -p ARGV Overide Port from -p ARGV
     if (argv.indexOf('-p') > -1) {
     config.MQTT.PORT = argv[argv.indexOf('-p') + 1]
@@ -65,15 +60,6 @@ export function get_config(app) { // Get the configuration
     // If -t ARGV Override Topic from -t ARGV
     if (argv.indexOf('-t') > -1) {
     config.MQTT.TOPIC = argv[argv.indexOf('-t') + 1]
-    }
-
-    // If -m ARGV Set Message from -m ARGV else exit on error
-    if (argv.indexOf('-m') > -1) {
-    config.MQTT.MESSAGE = argv[argv.indexOf('-m') + 1]
-    } else {
-        console.error('ERROR: No Message Provided')
-        pub_usage()
-        process.exit(1)
     }
 
 
@@ -110,9 +96,26 @@ export function get_config(app) { // Get the configuration
 
     config.APP.NAME      = path.join(app).replace(path.join(config.DIRS.APP_DIR, 'src') + '/', '')
     config.APP.LOG_TITLE = config.APP.NAME + " : v" + config.PACKAGE.version + ' ' + config.PACKAGE.version_date + ' : PID = ' + process.pid
+
     
-    // Debug
-    // console.log('DEBUG: ' + JSON.stringify(config, null, 2))
+    // If -m ARGV Set Message from -m ARGV else exit on error
+    if (config.APP.NAME == 'smqtt-pub.js') {
+        if (argv.indexOf('-m') > -1) {
+            config.MQTT.MESSAGE = argv[argv.indexOf('-m') + 1]
+        } else {
+            console.error('ERROR: No Message Provided')
+            console.log('')
+            pub_usage()
+            process.exit(1)
+        }                
+    }
+
+    // if -l ARGV Override Log File from -l ARGV
+    if (argv.indexOf('-l') > -1) {
+        config.FILES.LOG_FILE = argv[argv.indexOf('-l') + 1]
+    } else { // No -l ARGV then define the default log file based on the app name
+        config.FILES.LOG_FILE = path.join(config.DIRS.LOG_DIR, config.APP.NAME.replace(RegExp('\.js$'), '') + '.log')
+    }
 
     // Private / Public Keys
     // 0. if -k ARGV Generate new RSA Key Pair and save to KEY_DIR directory.
@@ -243,36 +246,6 @@ export function decrypt_message(encryptedMessage, privateKey) { // Decrypt a mes
     return crypto.privateDecrypt(privateKey, Buffer.from(encryptedMessage, 'base64')).toString('utf8')
 }
 
-// export async function publish(config) { // Publish a secret message to the MQTT Broker
-//     try {
-//         let client = mqtt.connect('mqtt://' + config.MQTT.BROKER + ':' + config.MQTT.PORT)
-//         let checksum = crypto.createHash('sha256').update(config.MQTT.MESSAGE).digest('base64')
-//         let payload = {}
-//         payload['MESSAGE'] = config.MQTT.MESSAGE
-//         payload['CHECKSUM'] = checksum
-//         let msgString = JSON.stringify(payload)
-
-//         let spayload = {}
-//         spayload['SMQTT'] = []
-//         spayload['SMQTT'].push(encrypt_message(msgString, config.SMQTT.PUBLIC_KEY))
-
-//         client.on('connect', () => {
-//             try {
-//                 client.publish(config.MQTT.TOPIC, JSON.stringify(spayload))
-//                 client.end()
-//             } catch (err) {
-//                 logger('ERROR: Cannot publish message to MQTT Broker: ' + config.MQTT.BROKER + ' : ' + err, config.FILES.LOG_FILE)
-//                 return false
-//             }
-//         })
-
-//         return true
-//     } catch (err) {
-//         logger('ERROR: Cannot connect to MQTT Broker: ' + config.MQTT.BROKER + ' : ' + err, config.FILES.LOG_FILE)
-//         return false
-//     }
-// }
-
 export function publish(config) { // Publish a secret message to the MQTT Broker
     return new Promise((resolve, reject) => {
         try {
@@ -306,19 +279,29 @@ export function publish(config) { // Publish a secret message to the MQTT Broker
     })
 }
 
-// export function sub_message(config) { // Subscribe to the MQTT Broker and decrypt the message
-//     let client = mqtt.connect('mqtt://' + config.MQTT.BROKER + ':' + config.MQTT.PORT)
+export function subscribe(config) { // Subscribe to the MQTT Broker and decrypt the messages
+    try {
+        let client = mqtt.connect('mqtt://' + config.MQTT.BROKER + ':' + config.MQTT.PORT)
+        client.on('connect', () => {
+            client.subscribe(config.MQTT.TOPIC)
+        })
 
-//     client.on('connect', () => {
-//         client.subscribe(config.MQTT.TOPIC, (err) => {
-//             if (!err) {
-//                 client.on('message', (topic, message) => {
-//                     let payload = JSON.parse(message)
-//                     let msgString = decrypt_message(payload['SMQTT'][0], config.SMQTT.PRIVATE_KEY)
-//                     let msg = JSON.parse(msgString)
-//                     logger('INFO : ' + msg['MESSAGE'] + ' : ' + msg['CHECKSUM'], config.FILES.LOG_FILE)
-//                 })
-//             }
-//         })
-//     })
-// }
+        client.on('message', (topic, message) => {
+            let spayload = JSON.parse(message.toString())
+            for (let i in spayload['SMQTT']) {
+                let payload = JSON.parse(decrypt_message(spayload['SMQTT'][i], config.SMQTT.PRIVATE_KEY))
+                let checksum = crypto.createHash('sha256').update(payload.MESSAGE).digest('base64')
+                if (checksum != payload.CHECKSUM) {
+                    logger('ERROR : CHECKSUM : FAILED : ', config.FILES.LOG_FILE)
+                } else {
+                    console.log(payload.MESSAGE)
+                    logger('SUB : MESSAGE : RECEIVED : ' + payload.TIMESTAMP, config.FILES.LOG_FILE)
+                }
+            }
+        })
+
+    } catch (err) {
+        logger('ERROR: Cannot connect to MQTT Broker: ' + config.MQTT.BROKER + ' : ' + err, config.FILES.LOG_FILE)
+        process.exit(1)
+    }
+}
