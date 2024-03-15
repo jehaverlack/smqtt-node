@@ -15,7 +15,7 @@ SMQTT provides a way to send secure messages over MQTT Broker Topics without usi
 
 # Example Usage
 
-## Sending one message
+## Example 1: Sending one message
 
 ### Publish to MQTT Topic
 ```
@@ -37,7 +37,7 @@ Hello World
 ```
 ---
 
-## Sending 3 messages
+## Example 2: Sending multiple messages
 
 ### SMQTT Publish to MQTT Topic
 ```
