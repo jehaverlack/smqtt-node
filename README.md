@@ -113,6 +113,15 @@ Usage:  smqtt-sub.js -c <mqtt-config.json> [OPTIONS]
 
 
 # Installation
+You will need [Node.js](https://nodejs.org/en/) >= 14.0.0 installed.
+
+```
+git clone git@github.com:jehaverlack/smqtt-nodejs.git
+```
+
+```
+cd smqtt-nodejs
+```
 
 ```
 npm install
