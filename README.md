@@ -135,8 +135,11 @@ Copy **src/smqtt-config.example.json** to **conf/smqtt-config.test.json**
 cp -a src/smqtt-config.example.json conf/smqtt-config.test.json
 ```
 
-**Edit the new config file.**
+### Edit the new config file.
 
+> You only need to update the MQTT section of the Config.  When you generate the RSA key with the -k option it will update the config file with the key info.
+
+> All other parameters are auto generated at runtime.
 
 ## Generating a new RSA Key Pair
 To generate your RSA Key Pair
