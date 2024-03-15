@@ -11,9 +11,9 @@ import * as applib from './applib.js'
 const config = applib.get_config(fileURLToPath(import.meta.url))
 // console.log('DEBUG: ' + JSON.stringify(config.SUB, null, 2))
 
-
-// ##########  Main Routine  ##########
 applib.logger('START : ' + config.APP.LOG_TITLE, config.FILES.LOG_FILE)
+
+// ##########  Exampel SMQTT Subscribe Routine  ##########
 
 // Example Sub SMQTT Config
 // config.SUB  =  {
@@ -29,7 +29,12 @@ applib.logger('START : ' + config.APP.LOG_TITLE, config.FILES.LOG_FILE)
 
 
 // Subscribe to the MQTT Broker
-smqtt.subscribe(config.SUB);
+
+smqtt.subscribe(config.SUB, (message) => {
+    // This function will be called each time a new message is received
+    applib.logger('SUB : MESSAGE : RECEIVED : ' + message, config.FILES.LOG_FILE);
+    console.log(message);
+});
 
 // ##########  End Main Routine  ##########
 

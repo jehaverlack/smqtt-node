@@ -30,7 +30,6 @@ export function decrypt_message(encryptedMessage, privateKey) { // Decrypt a mes
 
 export function publish(config) { // Publish  secret messages to the MQTT Broker
     return new Promise((resolve, reject) => {
-        console.log('DEBUG : PUB ' + JSON.stringify(config, null, 2))
         try {
             let client = mqtt.connect('mqtt://' + config.MQTT.BROKER + ':' + config.MQTT.PORT)
 
@@ -65,7 +64,7 @@ export function publish(config) { // Publish  secret messages to the MQTT Broker
     })
 }
 
-export function subscribe(config) { // Subscribe to the MQTT Broker and decrypt the messages
+export function subscribe(config, callback) { // Subscribe to the MQTT Broker and decrypt the messages
     try {
         let client = mqtt.connect('mqtt://' + config.MQTT.BROKER + ':' + config.MQTT.PORT)
         client.on('connect', () => {
@@ -80,8 +79,8 @@ export function subscribe(config) { // Subscribe to the MQTT Broker and decrypt 
                 if (checksum != payload.CHECKSUM) {
                     console.log('ERROR : CHECKSUM : FAILED : ')
                 } else {
-                    console.log(decodeURIComponent(payload.MESSAGE))
-                    // console.log('SUB : MESSAGE : RECEIVED : ' + payload.TIMESTAMP)
+                    // Call the callback function with the decrypted message
+                    callback(decodeURIComponent(payload.MESSAGE));
                 }
             }
         })

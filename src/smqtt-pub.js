@@ -38,7 +38,7 @@ msg_status[false] = 'FAILED'
 // Publish the message to the MQTT Broker
 try {
     const result = await smqtt.publish(config.PUB);
-    applib.logger('PUB : MESSAGE : ' + msg_status[result], config.FILES.LOG_FILE);
+    applib.logger('PUB : MESSAGE : SENT : ' + msg_status[result], config.FILES.LOG_FILE);
 } catch (err) {
     applib.logger('PUB : ERROR : ' + err, config.FILES.LOG_FILE);
 }
