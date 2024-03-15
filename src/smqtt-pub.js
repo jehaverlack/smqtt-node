@@ -5,38 +5,58 @@
 
 import { fileURLToPath } from 'url';
 import * as smqtt from './smqtt.js'
+import * as applib from './applib.js'
 
 // ##########  App Configuration  ##########
-const config = smqtt.get_config(fileURLToPath(import.meta.url))
+const config = applib.get_config(fileURLToPath(import.meta.url))
+// console.log('DEBUG: ' + JSON.stringify(config.PUB, null, 2))
 
 
 // ##########  Main Routine  ##########
+applib.logger('START : ' + config.APP.LOG_TITLE, config.FILES.LOG_FILE)
 
-// console.log('DEBUG: ' + JSON.stringify(config, null, 2))
+// Example Pub SMQTT Config
+// config.PUB  =  {
+//                     "MESSAGE": [
+//                         "Hello, World!",
+//                         "This is a secret message."
+//                     ],
+//                     "MQTT": {
+//                         "BROKER": "mqtt.example.com",
+//                         "PORT": 1883,
+//                         "TOPIC": "/example/topic"
+//                     },
+//                     "SMQTT": {
+//                         "PUBLIC_KEY": ""
+//                     }
+//                 }
 
-smqtt.logger('START : ' + config.APP.LOG_TITLE, config.FILES.LOG_FILE)
+let msg_status = {}
+msg_status[true]  = 'SUCCESS'
+msg_status[false] = 'FAILED'
 
 // Publish the message to the MQTT Broker
-
-smqtt.logger('PUB : MESSAGE : ' + config.MQTT.MESSAGE, config.FILES.LOG_FILE)
 try {
-    const result = await smqtt.publish(config);
-    smqtt.logger('PUB : MESSAGE : ' + result, config.FILES.LOG_FILE);
+    const result = await smqtt.publish(config.PUB);
+    applib.logger('PUB : MESSAGE : ' + msg_status[result], config.FILES.LOG_FILE);
 } catch (err) {
-    smqtt.logger('ERROR : ' + err, config.FILES.LOG_FILE);
+    applib.logger('PUB : ERROR : ' + err, config.FILES.LOG_FILE);
 }
 
+
 // ##########  End Main Routine  ##########
+
+
 // Exit if the event loop reaches the end.
 process.on('SIGINT', () => {
-    smqtt.logger('END   : ' + config.APP.LOG_TITLE, config.FILES.LOG_FILE)
+    applib.logger('END   : ' + config.APP.LOG_TITLE, config.FILES.LOG_FILE)
     process.exit(0)
 });
 
 process.on('SIGTERM', () => {
-    smqtt.logger('END   : ' + config.APP.LOG_TITLE, config.FILES.LOG_FILE)
+    applib.logger('END   : ' + config.APP.LOG_TITLE, config.FILES.LOG_FILE)
     process.exit(0)
 });
 
-smqtt.logger('END   : ' + config.APP.LOG_TITLE, config.FILES.LOG_FILE)
+applib.logger('END   : ' + config.APP.LOG_TITLE, config.FILES.LOG_FILE)
 process.exit(0)

@@ -5,29 +5,43 @@
 
 import { fileURLToPath } from 'url';
 import * as smqtt from './smqtt.js'
+import * as applib from './applib.js'
 
 // ##########  App Configuration  ##########
-const config = smqtt.get_config(fileURLToPath(import.meta.url))
+const config = applib.get_config(fileURLToPath(import.meta.url))
+// console.log('DEBUG: ' + JSON.stringify(config.SUB, null, 2))
 
 
 // ##########  Main Routine  ##########
+applib.logger('START : ' + config.APP.LOG_TITLE, config.FILES.LOG_FILE)
 
-// console.log('DEBUG: ' + JSON.stringify(config, null, 2))
+// Example Sub SMQTT Config
+// config.SUB  =  {
+//                     "MQTT": {
+//                         "BROKER": "mqtt.example.com",
+//                         "PORT": 1883,
+//                         "TOPIC": "/example/topic"
+//                     },
+//                     "SMQTT": {
+//                         "PRIVATE_KEY": ""
+//                     }
+//                 }
 
-smqtt.logger('START : ' + config.APP.LOG_TITLE, config.FILES.LOG_FILE)
 
 // Subscribe to the MQTT Broker
-smqtt.subscribe(config);
+smqtt.subscribe(config.SUB);
 
 // ##########  End Main Routine  ##########
+
+
 // Exit if the event loop reaches the end.
 process.on('SIGINT', () => {
-    smqtt.logger('END   : ' + config.APP.LOG_TITLE, config.FILES.LOG_FILE)
+    applib.logger('END   : ' + config.APP.LOG_TITLE, config.FILES.LOG_FILE)
     process.exit(0)
 });
 
 process.on('SIGTERM', () => {
-    smqtt.logger('END   : ' + config.APP.LOG_TITLE, config.FILES.LOG_FILE)
+    applib.logger('END   : ' + config.APP.LOG_TITLE, config.FILES.LOG_FILE)
     process.exit(0)
 });
 
