@@ -15,12 +15,6 @@ SMQTT provides a way to send secure messages over MQTT Broker Topics without usi
 
 # Example Usage
 
-## Config
-
-Copy **src/smqtt-config.example.json** to **conf/smqtt-config.test.json** and fill out 
-
----
-
 ## Sending one message
 
 ### Publish to MQTT Topic
@@ -126,6 +120,23 @@ cd smqtt-nodejs
 ```
 npm install
 ```
+
+## Config
+
+Create the **conf** directory
+
+```
+mkdir -p conf
+```
+
+Copy **src/smqtt-config.example.json** to **conf/smqtt-config.test.json** 
+
+```
+cp -a src/smqtt-config.example.json conf/smqtt-config.test.json
+```
+
+**Edit the new config file.**
+
 
 ## Generating a new RSA Key Pair
 To generate your RSA Key Pair
